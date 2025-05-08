@@ -1,0 +1,38 @@
+trigger:
+  branches:
+    include:
+      - main # Trigger the pipeline on changes to the main branch
+
+pool:
+  vmImage: 'ubuntu-latest' # Use the latest Ubuntu image for the pipeline
+
+steps:
+- task: UseDotNet@2
+  inputs:
+    packageType: 'sdk'
+    version: '5.x'  # Specify .NET Core version to use
+    installationPath: $(Agent.ToolsDirectory)/dotnet
+
+- task: Restore@2
+  inputs:
+    restoreSolution: '**/*.sln'  # Restore NuGet packages for all solution files
+
+- task: Build@1
+  inputs:
+    solution: '**/*.sln'  # Build all solution files
+
+- task: Test@2
+  inputs:
+    testSelector: 'testAssemblies'
+    testAssemblyVer2: '**/*test*.dll'  # Run unit tests
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    pathToPublish: '$(Build.ArtifactStagingDirectory)'  # Publish artifacts for deployment
+    artifactName: 'drop'  # Name of the artifact
+
+- task: AzureWebApp@1
+  inputs:
+    azureSubscription: '<your-azure-subscription>'
+    appName: '<your-webapp-name>'
+    package: '$(Build.ArtifactStagingDirectory)/drop/*.zip'  # Path to the artifact to deploy
